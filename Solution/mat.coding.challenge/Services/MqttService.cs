@@ -1,0 +1,88 @@
+﻿using System;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using mat.coding.challenge.Model;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using MQTTnet;
+using MQTTnet.Client.Options;
+using MQTTnet.Extensions.ManagedClient;
+using Newtonsoft.Json;
+
+namespace mat.coding.challenge.Services
+{
+    /// <summary>
+    /// Service for hosting the Mqtt Client
+    /// </summary>
+    public class MqttService : IHostedService, IDisposable
+    {
+        /// <summary>
+        /// The injected logger 
+        /// </summary>
+        private readonly ILogger<MqttService> _logger;
+        /// <summary>
+        /// The configuration options
+        /// </summary>
+        private readonly MqttSetting _options;
+        /// <summary>
+        /// The Mqtt Client
+        /// </summary>
+        private IManagedMqttClient _client;
+
+        public MqttService(ILogger<MqttService> logger, IOptions<MqttSetting> optionsAccessor)
+        {
+            _logger = logger;
+            _options = optionsAccessor.Value;
+        }
+
+        /// <summary>
+        /// Disposes the client.
+        /// </summary>
+        public void Dispose()
+        {
+            _client?.Dispose();
+        }
+
+        /// <summary>
+        /// Start the service by building the MQTT configuration
+        /// </summary>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        public async Task StartAsync(CancellationToken cancellationToken)
+        {
+            _client = new MqttFactory().CreateManagedMqttClient();
+
+            // Setup and start a managed MQTT client.
+            var mqttClientOptions = new ManagedMqttClientOptionsBuilder()
+                .WithAutoReconnectDelay(TimeSpan.FromSeconds(5))
+                .WithClientOptions(new MqttClientOptionsBuilder()
+                    .WithCommunicationTimeout(TimeSpan.FromSeconds(10))
+                    .WithTcpServer(_options.BrokerAddress,_options.BrokerPort)
+                    .Build())
+                .Build();
+
+            _client.UseConnectedHandler(e =>
+            {
+                _logger.LogInformation("Connected to MQTT server");
+            });
+
+            _client.UseApplicationMessageReceivedHandler(e =>
+            {
+                var obj = JsonConvert.DeserializeObject<CarCoordinates>(Encoding.UTF8.GetString(e.ApplicationMessage.Payload));
+                _logger.LogInformation(JsonConvert.SerializeObject(obj));
+            });
+
+            await _client.SubscribeAsync(new TopicFilterBuilder().WithTopic(_options.TopicName).Build());
+
+            _logger.LogInformation($"Connecting to server [{JsonConvert.SerializeObject(mqttClientOptions)}]...");
+            await _client.StartAsync(mqttClientOptions);
+        }
+
+        public Task StopAsync(CancellationToken cancellationToken)
+        {
+            return _client.StopAsync();
+        }
+    }
+}

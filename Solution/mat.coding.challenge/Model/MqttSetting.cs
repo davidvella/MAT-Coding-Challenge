@@ -1,0 +1,23 @@
+﻿using System;
+
+namespace mat.coding.challenge.Model
+{
+    /// <summary>
+    /// Settings for the MQTT Service
+    /// </summary>
+    public class MqttSetting
+    {
+        /// <summary>
+        /// The address of the MQTT Broker
+        /// </summary>
+        public string BrokerAddress { get; set; }
+        /// <summary>
+        /// The port of the MQTT Broker
+        /// </summary>
+        public int BrokerPort { get; set; }
+        /// <summary>
+        /// The name of the topic to subscribe to.
+        /// </summary>
+        public string TopicName { get; set; }
+    }
+}
