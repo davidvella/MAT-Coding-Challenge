@@ -27,8 +27,8 @@ namespace mat.coding.challenge.Model
     /// </summary>
     public class Location
     {
-        [JsonProperty("lat")] public long Latitude { get; set; }
-        [JsonProperty("long")] public long Longitude { get; set; }
+        [JsonProperty("lat")] public double Latitude { get; set; }
+        [JsonProperty("long")] public double Longitude { get; set; }
     }
 
 }

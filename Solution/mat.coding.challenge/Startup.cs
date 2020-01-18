@@ -1,4 +1,5 @@
 ﻿using mat.coding.challenge.Model;
+using mat.coding.challenge.TopicWorker;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -22,6 +23,7 @@ namespace mat.coding.challenge
         public void ConfigureServices(IServiceCollection services)
         {
             services.Configure<MqttSetting>(Configuration);
+            services.AddSingleton<ITopicHandler<CarCoordinates>, CarCoordinateHandler>();
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)

@@ -16,25 +16,30 @@ namespace mat.coding.challenge.Services
     /// <summary>
     /// Service for hosting the Mqtt Client
     /// </summary>
-    public class MqttService : IHostedService, IDisposable
+    public class MqttService<T> : IHostedService, IDisposable
     {
         /// <summary>
         /// The injected logger 
         /// </summary>
-        private readonly ILogger<MqttService> _logger;
+        private readonly ILogger<MqttService<T>> _logger;
         /// <summary>
         /// The configuration options
         /// </summary>
         private readonly MqttSetting _options;
         /// <summary>
+        /// The configuration options
+        /// </summary>
+        private readonly ITopicHandler<T> _topicHandler;
+        /// <summary>
         /// The Mqtt Client
         /// </summary>
         private IManagedMqttClient _client;
 
-        public MqttService(ILogger<MqttService> logger, IOptions<MqttSetting> optionsAccessor)
+        public MqttService(ILogger<MqttService<T>> logger, IOptions<MqttSetting> optionsAccessor, ITopicHandler<T> topicHandler)
         {
             _logger = logger;
             _options = optionsAccessor.Value;
+            _topicHandler = topicHandler;
         }
 
         /// <summary>
@@ -59,7 +64,7 @@ namespace mat.coding.challenge.Services
                 .WithAutoReconnectDelay(TimeSpan.FromSeconds(5))
                 .WithClientOptions(new MqttClientOptionsBuilder()
                     .WithCommunicationTimeout(TimeSpan.FromSeconds(10))
-                    .WithTcpServer(_options.BrokerAddress,_options.BrokerPort)
+                    .WithTcpServer(_options.BrokerAddress, _options.BrokerPort)
                     .Build())
                 .Build();
 
@@ -70,8 +75,8 @@ namespace mat.coding.challenge.Services
 
             _client.UseApplicationMessageReceivedHandler(e =>
             {
-                var obj = JsonConvert.DeserializeObject<CarCoordinates>(Encoding.UTF8.GetString(e.ApplicationMessage.Payload));
-                _logger.LogInformation(JsonConvert.SerializeObject(obj));
+                var obj = JsonConvert.DeserializeObject<T>(Encoding.UTF8.GetString(e.ApplicationMessage.Payload));
+                _topicHandler.WorkAsync(_client, obj);
             });
 
             await _client.SubscribeAsync(new TopicFilterBuilder().WithTopic(_options.TopicName).Build());

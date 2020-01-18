@@ -1,4 +1,5 @@
-﻿using mat.coding.challenge.Services;
+﻿using mat.coding.challenge.Model;
+using mat.coding.challenge.Services;
 using Microsoft.Extensions.Hosting;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -26,7 +27,7 @@ namespace mat.coding.challenge
                 })
                 .ConfigureServices(services =>
                 {
-                    services.AddHostedService<MqttService>();
+                    services.AddHostedService<MqttService<CarCoordinates>>();
                 });
 
 
