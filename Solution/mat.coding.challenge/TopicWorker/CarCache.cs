@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using System.Threading;
-using mat.coding.challenge.Model;
 
 namespace mat.coding.challenge.TopicWorker
 {
@@ -11,16 +10,17 @@ namespace mat.coding.challenge.TopicWorker
     public class CarCache
     {
         private readonly ReaderWriterLockSlim _cacheLock = new ReaderWriterLockSlim();
-        private readonly Dictionary<int, CarCoordinates> _innerCache = new Dictionary<int, CarCoordinates>();
+        private readonly Dictionary<int, CarInformation> _innerCache = new Dictionary<int, CarInformation>();
 
         public int Count => _innerCache.Count;
 
-        public CarCoordinates Read(int key)
+        public CarInformation Read(int key)
         {
             _cacheLock.EnterReadLock();
             try
             {
                 return _innerCache[key];
+
             }
             finally
             {
@@ -28,7 +28,21 @@ namespace mat.coding.challenge.TopicWorker
             }
         }
 
-        public void Add(int key, CarCoordinates value)
+        public ICollection<CarInformation> Values()
+        {
+            _cacheLock.EnterReadLock();
+            try
+            {
+                return _innerCache.Values;
+
+            }
+            finally
+            {
+                _cacheLock.ExitReadLock();
+            }
+        }
+
+        public void Add(int key, CarInformation value)
         {
             _cacheLock.EnterWriteLock();
             try
@@ -41,7 +55,7 @@ namespace mat.coding.challenge.TopicWorker
             }
         }
 
-        public bool AddWithTimeout(int key, CarCoordinates value, int timeout)
+        public bool AddWithTimeout(int key, CarInformation value, int timeout)
         {
             if (_cacheLock.TryEnterWriteLock(timeout))
             {
@@ -61,7 +75,7 @@ namespace mat.coding.challenge.TopicWorker
             }
         }
 
-        public AddOrUpdateStatus AddOrUpdate(int key, CarCoordinates value)
+        public AddOrUpdateStatus AddOrUpdate(int key, CarInformation value)
         {
             _cacheLock.EnterUpgradeableReadLock();
             try

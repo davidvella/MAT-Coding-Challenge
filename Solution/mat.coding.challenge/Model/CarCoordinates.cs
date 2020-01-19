@@ -1,4 +1,5 @@
 ﻿
+using mat.coding.challenge.Attribute;
 using Newtonsoft.Json;
 
 namespace mat.coding.challenge.Model
@@ -6,6 +7,7 @@ namespace mat.coding.challenge.Model
     /// <summary>
     /// MQTT Topic information
     /// </summary>
+    [Topic("carCoordinates")]
     public class CarCoordinates
     {
         /// <summary>

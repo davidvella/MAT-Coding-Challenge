@@ -1,10 +1,10 @@
 ﻿using System.Threading.Tasks;
 using MQTTnet.Extensions.ManagedClient;
 
-namespace mat.coding.challenge.Model
+namespace mat.coding.challenge
 {
     public interface ITopicHandler<T>
     {
-        Task WorkAsync(IManagedMqttClient mqttClient, T topic);
+        Task Work(IManagedMqttClient mqttClient, T topic);
     }
 }

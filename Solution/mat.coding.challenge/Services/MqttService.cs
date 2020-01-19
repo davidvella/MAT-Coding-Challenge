@@ -2,6 +2,7 @@
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using mat.coding.challenge.Extensions;
 using mat.coding.challenge.Model;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -68,18 +69,20 @@ namespace mat.coding.challenge.Services
                     .Build())
                 .Build();
 
-            _client.UseConnectedHandler(e =>
+            _client.UseConnectedHandler(async e =>
             {
-                _logger.LogInformation("Connected to MQTT server");
+                _logger.LogInformation("### CONNECTED WITH SERVER ###");
+
+                await _client.SubscribeAsync(new TopicFilterBuilder().WithTopic(typeof(T).GetTopicName()).Build());
+
+                _logger.LogInformation("### SUBSCRIBED ###");
             });
 
             _client.UseApplicationMessageReceivedHandler(e =>
             {
                 var obj = JsonConvert.DeserializeObject<T>(Encoding.UTF8.GetString(e.ApplicationMessage.Payload));
-                _topicHandler.WorkAsync(_client, obj);
+                _topicHandler.Work(_client, obj);
             });
-
-            await _client.SubscribeAsync(new TopicFilterBuilder().WithTopic(_options.TopicName).Build());
 
             _logger.LogInformation($"Connecting to server [{JsonConvert.SerializeObject(mqttClientOptions)}]...");
             await _client.StartAsync(mqttClientOptions);

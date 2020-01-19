@@ -1,17 +1,23 @@
-﻿using System.Text.Json;
+﻿using mat.coding.challenge.Extensions;
 using MQTTnet;
+using Newtonsoft.Json;
 
 namespace mat.coding.challenge.Message
 {
     public class MessageBuilder
     {
-        public static MqttApplicationMessage CreateMessage(string topic, string payload)
+        /// <summary>
+        /// Create a MqttMessage form an object.
+        /// </summary>
+        /// <param name="message">The object to be sent</param>
+        /// <returns>A publishable message.</returns>
+        public static MqttApplicationMessage CreateMessage(object message)
         {
-            var bytes = JsonSerializer.SerializeToUtf8Bytes(payload);
+            var topicName = message.GetType().GetTopicName();
 
             return new MqttApplicationMessageBuilder()
-                .WithTopic(topic)
-                .WithPayload(bytes)
+                .WithTopic(topicName)
+                .WithPayload(JsonConvert.SerializeObject(message))
                 .Build();
         }
     }

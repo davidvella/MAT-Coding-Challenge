@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using mat.coding.challenge.Model;
 using Microsoft.Extensions.Logging;
 using MQTTnet.Extensions.ManagedClient;
-using Newtonsoft.Json;
 using GeoCoordinatePortable;
 using mat.coding.challenge.Message;
+using Newtonsoft.Json;
 
 namespace mat.coding.challenge.TopicWorker
 {
@@ -16,6 +17,7 @@ namespace mat.coding.challenge.TopicWorker
     public class CarCoordinateHandler : ITopicHandler<CarCoordinates>
     {
         private readonly ILogger<CarCoordinateHandler> _logger;
+        // Create a new concurrent dictionary.
         private readonly CarCache _carCache;
 
         public CarCoordinateHandler(ILogger<CarCoordinateHandler> logger)
@@ -30,35 +32,76 @@ namespace mat.coding.challenge.TopicWorker
         /// <param name="mqttClient">The MQTT Client</param>
         /// <param name="topic">The most recent topic</param>
         /// <returns>A Task which performs the operation</returns>
-        public async Task WorkAsync(IManagedMqttClient mqttClient, CarCoordinates topic)
+        public async Task Work(IManagedMqttClient mqttClient, CarCoordinates topic)
         {
             try
             {
                 // Get lastCoordinate from key
-                var lastCoordinate = _carCache.Read(topic.CarIndex);
-                _carCache.AddOrUpdate(topic.CarIndex, topic);
+                var carInformation = _carCache.Read(topic.CarIndex);
 
                 // Get Geo coordinate
-                var lastGeoCoordinate =
-                    new GeoCoordinate(lastCoordinate.Location.Latitude, lastCoordinate.Location.Longitude);
+                var lastGeoCoordinate = new GeoCoordinate(carInformation.LastLocation.Latitude, carInformation.LastLocation.Longitude);
                 var currentGeoCoordinate = new GeoCoordinate(topic.Location.Latitude, topic.Location.Longitude);
 
                 // Calculate the distance and the speed
                 var distance = lastGeoCoordinate.GetDistanceTo(currentGeoCoordinate);
-                var speed = Speedometer.CalculateSpeedMph(distance, lastCoordinate.TimeStamp, topic.TimeStamp);
+                var speed = Speedometer.CalculateSpeedMph(distance, carInformation.LastRecordedTimestamp,
+                    topic.TimeStamp);
+
+                // using the total distance driven
+                var carValues = _carCache.Values().ToList();
+                var position = carValues.OrderByDescending(x => x.TotalDistanceTraveled)
+                                   .Select(x => x.CarIndex).ToList().IndexOf(topic.CarIndex) + 1;
+
+                //  has the car position changed
+                if (position != carInformation.Position)
+                {
+                    //  who is now in that position?
+                    var carInPreviousPos = carValues.FirstOrDefault(x => x.Position == position);
+
+                    if (carInPreviousPos != null)
+                    {
+                        var eventStatus = new EventMessage()
+                        {
+                            Timestamp = topic.TimeStamp,
+                            Text = $"Car {carInPreviousPos.CarIndex} races ahead of Car {carInformation.CarIndex} in a dramatic overtake."
+                        };
+                        var messageEvent = MessageBuilder.CreateMessage(eventStatus);
+
+                        //  send event for the overtake
+                        await mqttClient.PublishAsync(messageEvent);
+                    }
+                }
+
+
+                // Set information
+                carInformation.TotalDistanceTraveled += distance;
+                carInformation.LastRecordedTimestamp = topic.TimeStamp;
+                carInformation.LastLocation = topic.Location;
+                carInformation.Position = position;
+                _carCache.AddOrUpdate(topic.CarIndex, carInformation);
 
                 // The response
-                var speedStatus = CarStatus.SpeedStatus(topic,speed);
+                var messageSpeed = MessageBuilder.CreateMessage(CarStatus.SpeedStatus(topic, speed));
+                var messagePosition = MessageBuilder.CreateMessage(CarStatus.PositionStatus(topic, position));
 
-                var messageSpeed = MessageBuilder.CreateMessage("carStatus", JsonConvert.SerializeObject(speedStatus));
                 await mqttClient.PublishAsync(messageSpeed);
-                // Update the cache for next call
+                await mqttClient.PublishAsync(messagePosition);
 
             }
             catch (KeyNotFoundException)
             {
                 // Must be first time round, add topic to dictionary
-                _carCache.AddOrUpdate(topic.CarIndex, topic);
+                var carInformation = new CarInformation()
+                {
+                    LastLocation = topic.Location,
+                    LastRecordedTimestamp = topic.TimeStamp,
+                    Position = 0,
+                    TotalDistanceTraveled = 0,
+                    CarIndex = topic.CarIndex
+                };
+
+                _carCache.AddOrUpdate(topic.CarIndex, carInformation);
             }
             catch (Exception ex)
             {
