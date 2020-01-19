@@ -7,7 +7,6 @@ using Microsoft.Extensions.Logging;
 using MQTTnet.Extensions.ManagedClient;
 using GeoCoordinatePortable;
 using mat.coding.challenge.Message;
-using Newtonsoft.Json;
 
 namespace mat.coding.challenge.TopicWorker
 {
@@ -18,12 +17,18 @@ namespace mat.coding.challenge.TopicWorker
     {
         private readonly ILogger<CarCoordinateHandler> _logger;
         // Create a new concurrent dictionary.
-        private readonly CarCache _carCache;
+        private readonly ICarCache _carCache;
 
         public CarCoordinateHandler(ILogger<CarCoordinateHandler> logger)
         {
             _logger = logger;
             _carCache = new CarCache();
+        }
+
+        public CarCoordinateHandler(ILogger<CarCoordinateHandler> logger, ICarCache carCache)
+        {
+            _logger = logger;
+            _carCache = carCache;
         }
 
         /// <summary>
@@ -64,7 +69,8 @@ namespace mat.coding.challenge.TopicWorker
                         var eventStatus = new EventMessage()
                         {
                             Timestamp = topic.TimeStamp,
-                            Text = $"Car {carInPreviousPos.CarIndex} races ahead of Car {carInformation.CarIndex} in a dramatic overtake."
+                            Text =
+                                $"Car {carInPreviousPos.CarIndex} races ahead of Car {carInformation.CarIndex} in a dramatic overtake."
                         };
                         var messageEvent = MessageBuilder.CreateMessage(eventStatus);
 
@@ -73,8 +79,7 @@ namespace mat.coding.challenge.TopicWorker
                     }
                 }
 
-
-                // Set information
+                // Set information car information
                 carInformation.TotalDistanceTraveled += distance;
                 carInformation.LastRecordedTimestamp = topic.TimeStamp;
                 carInformation.LastLocation = topic.Location;

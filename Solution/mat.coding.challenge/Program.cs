@@ -18,8 +18,8 @@ namespace mat.coding.challenge
             Host.CreateDefaultBuilder(args)
                 .ConfigureAppConfiguration((hostingContext, config) =>
                 {
-                    config.AddEnvironmentVariables(prefix: "MQTT_");
                     config.AddCommandLine(args);
+                    config.AddEnvironmentVariables(prefix: "MQTT_");
                 })
                 .ConfigureWebHostDefaults(webBuilder =>
                 {

@@ -41,3 +41,14 @@ services:
                         - mqtt_to_websocket
                 ports:
                         - "127.0.0.1:8084:8084/tcp"
+        # Carcoordinateapp
+        carcoordinateapp:
+                container_name: carcoordinateapp
+                depends_on: 
+                        - broker
+                environment:
+                    - MQTT_BrokerAddress=broker
+                    - MQTT_BrokerPort=1883
+                ports:
+                        - "1883:1883/tcp"
+                image: davidvella/mat.coding.challenge:first

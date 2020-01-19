@@ -7,7 +7,7 @@ namespace mat.coding.challenge.TopicWorker
     /// Cache which stores the last information for the car
     /// Used implementation from https://docs.microsoft.com/en-us/dotnet/api/system.threading.readerwriterlockslim?redirectedfrom=MSDN&amp;view=netframework-4.8
     /// </summary>
-    public class CarCache
+    public class CarCache : ICarCache
     {
         private readonly ReaderWriterLockSlim _cacheLock = new ReaderWriterLockSlim();
         private readonly Dictionary<int, CarInformation> _innerCache = new Dictionary<int, CarInformation>();
